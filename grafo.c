@@ -90,3 +90,72 @@ void grafo_escrever_info(Grafo *g, const char *arquivo) {
 
     fclose(f);
 }
+
+// Função auxiliar para calcular quantos vizinhos um vértice possui, dependendo da representação do grafo
+// Serve também para não repetir código if matriz else lista, DRY
+int grau_vertice(Grafo *g, int v) {
+    if(g->representacao == REP_MATRIZ) {
+        int grau = 0;
+        for(int i = 1; i <= g->num_vertices; i++) {
+            if(g->matriz[v][i]) grau++;
+        }
+        return grau;
+    }
+    int grau = 0;
+    for(AdjNo *n = g->lista[v]; n; n = n->prox) grau++;
+    return grau;
+}
+
+// Funação que busca o grau mínimo de todos os vértices do grafo, utilizando a função grau_vertice
+int grau_min(Grafo *g) {
+    int min = grau_vertice(g, 1);
+    for(int v = 2; v <= g->num_vertices; v++) {
+        int grau = grau_vertice(g, v);
+        if(grau < min) min = grau;
+    }
+    return min;
+}
+
+//Função que busca o grau máximo de todos os vértices do grafo, utilizando a função grau_vertice
+int grau_max(Grafo *g) {
+    int max = grau_vertice(g, 1);
+    for(int v = 2; v <= g->num_vertices; v++) {
+        int grau = grau_vertice(g, v);
+        if(grau > max) max = grau;
+    }
+    return max;
+}
+
+// Função que calcula a soma de todos os graus divida pela qtd de vértices
+double grau_medio(Grafo *g) {
+    long soma = 0;
+    for(int v = 1; v <=g->num_vertices; v++) {
+        soma += grau_vertice(g, v);
+    }
+    return (double)soma / g->num_vertices;
+}
+
+//Função para auxiliar o qsort a ordenar os graus dos vértices, para calcular a mediana
+static int cmp_int(const void *a, const void *b) {
+    return (*(const int *)a) - (*(const int *)b);
+}
+
+//Função que usa o qsort para ordenar os graus dos vértices e calcular a mediana, utilizando a função grau_vertice
+double grau_mediana(Grafo *g) {
+    int n = g->num_vertices;
+    int *graus = (int *)malloc(n * sizeof(int));
+    for(int v = 1; v <= n; v++) {
+        graus[v-1] = grau_vertice(g, v);
+    }
+    qsort(graus, n, sizeof(int), cmp_int);
+
+    double mediana;
+    if(n % 2 == 1) {
+        mediana = graus[n / 2];
+    } else {
+        mediana = (graus[n/2 - 1] + graus[n/2]) / 2.0;
+    }
+    free(graus);
+    return mediana;
+}
+
