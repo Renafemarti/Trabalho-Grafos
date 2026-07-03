@@ -159,3 +159,53 @@ double grau_mediana(Grafo *g) {
     return mediana;
 }
 
+// Função que realiza a busca em largura (BFS) em um grafo, retornando um ponteiro para uma estrutura ResultBusca contendo informações sobre a busca
+ResultBusca *bfs(Grafo *g, int origem) {
+    int n = g->num_vertices;
+
+    ResultBusca *res = (ResultBusca *)malloc(sizeof(ResultBusca));
+    res->pai = (int *)malloc((n + 1) * sizeof(int));
+    res->nivel = (int *)malloc((n + 1) * sizeof(int));  
+    res->ordem = (int *)malloc((n + 1) * sizeof(int));
+    res->n_ordem = 0;
+
+    for(int i = 0; i <=n; i++) {
+        res->pai[i] = -1;
+        res->nivel[i] = -1;
+    }
+
+    int *fila = (int *)malloc((n + 1) * sizeof(int));
+    int inicio = 0, fim = 0;
+
+    res->pai[origem] = 0;
+    res->nivel[origem] = 0;
+    fila[fim++] = origem;
+    res->ordem[res->n_ordem++] = origem;
+
+    while(inicio < fim) {
+        int u = fila[inicio++];
+
+        if(g->representacao == REP_MATRIZ) {
+            for(int v = 1; v <=n; v++) {
+                if(g->matriz[u][v] && res->nivel[v] == -1) {
+                    res->pai[v] = u;
+                    res->nivel[v] = res->nivel[u] + 1;
+                    fila[fim++] = v;
+                    res->ordem[res->n_ordem++] = v;
+                }
+            }
+        } else {
+            for(AdjNo *no = g->lista[u]; no; no->prox) {
+                int v = no->vertice;
+                if(res->nivel[v] == -1) {
+                    res->pai[v] = u;
+                    res->nivel[v] = res->nivel[u] + 1;
+                    fila[fim++] = v;
+                    res->ordem[res->n_ordem++] = v;
+                }
+            }
+        }
+    }
+    free(fila);
+    return res;
+}
