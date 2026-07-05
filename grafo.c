@@ -259,7 +259,7 @@ ResultBusca *dfs(Grafo *g, int origem) {
     free(pilha);
     return res;
 }
- 
+
 //funcao pra liberar a memoria da bfs e dfs
 //usar na distancia, diamentro, diametro_aprox e resultcomponentes
 void busca_resultado_destruir(ResultBusca *res) {
