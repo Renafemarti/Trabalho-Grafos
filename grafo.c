@@ -260,3 +260,78 @@ ResultBusca *dfs(Grafo *g, int origem) {
     free(pilha);
     return res;
 }
+
+//funcao que vai fazer a dfs funcionar independente da representacao dela
+static int vizinhos(Grafo *g, int v, int *buffer) {
+    int k = 0;
+    if (g->representacao == REP_MATRIZ) {
+        for (int i = 1; i <= g->num_vertices; i++)
+            if (g->matriz[v][i]) buffer[k++] = i;
+    } else {
+        for (AdjNo *n = g->lista[v]; n; n = n->prox)
+            buffer[k++] = n->vertice;
+    }
+    return k;
+}
+ 
+//funcao pra liberar a memoria da bfs e dfs
+//usar na distancia, diamentro, diametro_aprox e resultcomponentes
+void busca_resultado_destruir(ResultBusca *res) {
+    if (!res) return;
+    free(res->pai);
+    free(res->nivel);
+    free(res->ordem);
+    free(res);
+}
+ 
+//usar no main
+//funcao pra liberar a memoria do componentes_conexo
+void componentes_destruir(ResultComponentes *res) {
+    if (!res) return;
+    for (int i = 0; i < res->num_componentes; i++)
+        free(res->componentes[i].vertices);
+    free(res->componentes);
+    free(res);
+}
+//funcao pra ordenar do os componentes em orden crescente
+static int cmp_componente_desc(const void *a, const void *b) {
+    const Componente *ca = (const Componente *)a;
+    const Componente *cb = (const Componente *)b;
+    return cb->tamanho - ca->tamanho;
+}
+
+
+//funcao que usa a bfs pra os conexos apartir de cada vertice que nao foi visitado e ordem crescente
+ResultComponentes *componentes_conexas(Grafo *g) {
+    int n = g->num_vertices;
+    int *visitado = (int *)calloc(n + 1, sizeof(int));
+ 
+    Componente *comps = (Componente *)malloc(n * sizeof(Componente));
+    int num_comps = 0;
+ 
+    for (int v = 1; v <= n; v++) {
+        if (visitado[v]) continue;
+ 
+        ResultBusca *res = bfs(g, v);
+        int tamanho = res->n_ordem;
+        int *vertices = (int *)malloc(tamanho * sizeof(int));
+        for (int i = 0; i < tamanho; i++) {
+            vertices[i] = res->ordem[i];
+            visitado[res->ordem[i]] = 1;
+        }
+        comps[num_comps].vertices = vertices;
+        comps[num_comps].tamanho = tamanho;
+        num_comps++;
+ 
+        busca_resultado_destruir(res);
+    }
+ 
+    qsort(comps, num_comps, sizeof(Componente), cmp_componente_desc);
+ 
+    ResultComponentes *rc = (ResultComponentes *)malloc(sizeof(ResultComponentes));
+    rc->componentes = comps;
+    rc->num_componentes = num_comps;
+ 
+    free(visitado);
+    return rc;
+}
