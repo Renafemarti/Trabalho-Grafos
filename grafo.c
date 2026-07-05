@@ -74,19 +74,18 @@ Grafo *grafo_ler(const char *arquivo, int representacao) {
 void grafo_escrever_info(Grafo *g, const char *arquivo) {
     FILE *f = fopen(arquivo, "w");
     if (!f) { perror("grafo_escrever_info"); return; }
-    //precisa fazer as funcoes depois
-    //fprintf(f, "Vertices:        %d\n", g->num_vertices);
-    //fprintf(f, "Arestas:         %d\n", g->num_arestas);
-    //fprintf(f, "Grau minimo:     %d\n", grau_minimo(g));
-    //fprintf(f, "Grau maximo:     %d\n", grau_maximo(g));
-    //fprintf(f, "Grau medio:      %.4f\n", grau_medio(g));
-    //fprintf(f, "Mediana de grau: %.1f\n", grau_mediana(g));
+    fprintf(f, "Vertices:        %d\n", g->num_vertices);
+    fprintf(f, "Arestas:         %d\n", g->num_arestas);
+    fprintf(f, "Grau minimo:     %d\n", grau_minimo(g));
+    fprintf(f, "Grau maximo:     %d\n", grau_maximo(g));
+    fprintf(f, "Grau medio:      %.4f\n", grau_medio(g));
+    fprintf(f, "Mediana de grau: %.1f\n", grau_mediana(g));
 
-    //ResultComponentes *rc = componentes_conexas(g);
-    //fprintf(f, "Componentes conexas: %d\n", rc->num_componentes);
-    //for (int i = 0; i < rc->num_componentes; i++)
-    //    fprintf(f, "  Componente %d: %d vertices\n", i + 1, rc->componentes[i].tamanho);
-    //componentes_destruir(rc);
+    ResultComponentes *rc = componentes_conexas(g);
+    fprintf(f, "Componentes conexas: %d\n", rc->num_componentes);
+    for (int i = 0; i < rc->num_componentes; i++)
+        fprintf(f, "  Componente %d: %d vertices\n", i + 1, rc->componentes[i].tamanho);
+    componentes_destruir(rc);
 
     fclose(f);
 }
@@ -107,7 +106,7 @@ int grau_vertice(Grafo *g, int v) {
 }
 
 // Funação que busca o grau mínimo de todos os vértices do grafo, utilizando a função grau_vertice
-int grau_min(Grafo *g) {
+int grau_minimo(Grafo *g) {
     int min = grau_vertice(g, 1);
     for(int v = 2; v <= g->num_vertices; v++) {
         int grau = grau_vertice(g, v);
@@ -117,7 +116,7 @@ int grau_min(Grafo *g) {
 }
 
 //Função que busca o grau máximo de todos os vértices do grafo, utilizando a função grau_vertice
-int grau_max(Grafo *g) {
+int grau_maximo(Grafo *g) {
     int max = grau_vertice(g, 1);
     for(int v = 2; v <= g->num_vertices; v++) {
         int grau = grau_vertice(g, v);
@@ -195,7 +194,7 @@ ResultBusca *bfs(Grafo *g, int origem) {
                 }
             }
         } else {
-            for(AdjNo *no = g->lista[u]; no; no->prox) {
+            for(AdjNo *no = g->lista[u]; no; no = no->prox) {
                 int v = no->vertice;
                 if(res->nivel[v] == -1) {
                     res->pai[v] = u;
@@ -208,4 +207,105 @@ ResultBusca *bfs(Grafo *g, int origem) {
     }
     free(fila);
     return res;
+}
+
+
+//funcao que vai fazer a dfs funcionar independente da representacao dela
+static int vizinhos(Grafo *g, int v, int *buffer) {
+    int k = 0;
+    if (g->representacao == REP_MATRIZ) {
+        for (int i = 1; i <= g->num_vertices; i++)
+            if (g->matriz[v][i]) buffer[k++] = i;
+    } else {
+        for (AdjNo *n = g->lista[v]; n; n = n->prox)
+            buffer[k++] = n->vertice;
+    }
+    return k;
+}
+
+//funcao pra liberar a memoria da bfs e dfs
+//usar na distancia, diamentro, diametro_aprox e resultcomponentes
+void busca_resultado_destruir(ResultBusca *res) {
+    if (!res) return;
+    free(res->pai);
+    free(res->nivel);
+    free(res->ordem);
+    free(res);
+}
+
+static int cmp_componente_desc(const void *a, const void *b) {
+    const Componente *ca = (const Componente *)a;
+    const Componente *cb = (const Componente *)b;
+    return cb->tamanho - ca->tamanho;
+}
+
+//usar no main
+//funcao pra liberar a memoria do componentes_conexo
+ResultComponentes *componentes_conexas(Grafo *g) {
+    int n = g->num_vertices;
+    int *visitado = (int *)calloc(n + 1, sizeof(int));
+ 
+    Componente *comps = (Componente *)malloc(n * sizeof(Componente));
+    int num_comps = 0;
+ 
+    for (int v = 1; v <= n; v++) {
+        if (visitado[v]) continue;
+ 
+        ResultBusca *res = bfs(g, v);
+        int tamanho = res->n_ordem;
+        int *vertices = (int *)malloc(tamanho * sizeof(int));
+        for (int i = 0; i < tamanho; i++) {
+            vertices[i] = res->ordem[i];
+            visitado[res->ordem[i]] = 1;
+        }
+        comps[num_comps].vertices = vertices;
+        comps[num_comps].tamanho = tamanho;
+        num_comps++;
+ 
+        busca_resultado_destruir(res);
+    }
+ 
+    qsort(comps, num_comps, sizeof(Componente), cmp_componente_desc);
+ 
+    ResultComponentes *rc = (ResultComponentes *)malloc(sizeof(ResultComponentes));
+    rc->componentes = comps;
+    rc->num_componentes = num_comps;
+ 
+    free(visitado);
+    return rc;
+}
+
+//funcao que usa a bfs pra os conexos apartir de cada vertice que nao foi visitado e ordena cre
+ResultComponentes *componentes_conexas(Grafo *g) {
+    int n = g->num_vertices;
+    int *visitado = (int *)calloc(n + 1, sizeof(int));
+ 
+    Componente *comps = (Componente *)malloc(n * sizeof(Componente));
+    int num_comps = 0;
+ 
+    for (int v = 1; v <= n; v++) {
+        if (visitado[v]) continue;
+ 
+        ResultBusca *res = bfs(g, v);
+        int tamanho = res->n_ordem;
+        int *vertices = (int *)malloc(tamanho * sizeof(int));
+        for (int i = 0; i < tamanho; i++) {
+            vertices[i] = res->ordem[i];
+            visitado[res->ordem[i]] = 1;
+        }
+        comps[num_comps].vertices = vertices;
+        comps[num_comps].tamanho = tamanho;
+        num_comps++;
+ 
+        busca_resultado_destruir(res);
+    }
+ 
+    qsort(comps, num_comps, sizeof(Componente), cmp_componente_desc);
+ 
+    ResultComponentes *rc = (ResultComponentes *)malloc(sizeof(ResultComponentes));
+    rc->componentes = comps;
+    rc->num_componentes = num_comps;
+ 
+    free(visitado);
+    return rc;
 }
