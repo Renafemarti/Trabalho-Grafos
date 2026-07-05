@@ -209,3 +209,54 @@ ResultBusca *bfs(Grafo *g, int origem) {
     free(fila);
     return res;
 }
+
+//Função que realiza a busca em profundidade (DFS) em um grafo, retornando um ponteiro para uma estrutura ResultBusca contendo informações sobre a busca
+ResultBusca *dfs(Grafo *g, int origem) {
+    int n = g->num_vertices;
+
+    ResultBusca *res = (ResultBusca *)malloc(sizeof(ResultBusca));
+    res->pai = (int *)malloc((n + 1) * sizeof(int));
+    res->nivel = (int *)malloc((n + 1) * sizeof(int));
+    res->ordem = (int *)malloc((n + 1) * sizeof(int));
+    res->n_ordem = 0;
+
+    for (int i = 0; i <= n; i++) {
+        res->pai[i] = -1;
+        res->nivel[i] = -1;
+    }
+
+    int *pilha = (int *)malloc((n + 1) * sizeof(int));
+    int topo = 0;
+
+    res->pai[origem] = 0;
+    res->nivel[origem] = 0;
+    pilha[topo++] = origem;
+    res->ordem[res->n_ordem++] = origem;
+
+    while (topo > 0) {
+        int u = pilha[--topo];
+
+        if (g->representacao == REP_MATRIZ) {
+            for (int v = 1; v <= n; v++) {
+                if (g->matriz[u][v] && res->nivel[v] == -1) {
+                    res->pai[v] = u;
+                    res->nivel[v] = res->nivel[u] + 1;
+                    pilha[topo++] = v;
+                    res->ordem[res->n_ordem++] = v;
+                }
+            }
+        } else {
+            for (AdjNo *no = g->lista[u]; no; no = no->prox) {
+                int v = no->vertice;
+                if (res->nivel[v] == -1) {
+                    res->pai[v] = u;
+                    res->nivel[v] = res->nivel[u] + 1;
+                    pilha[topo++] = v;
+                    res->ordem[res->n_ordem++] = v;
+                }
+            }
+        }
+    }
+    free(pilha);
+    return res;
+}
