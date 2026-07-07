@@ -87,6 +87,9 @@ void grafo_escrever_info(Grafo *g, const char *arquivo) {
         fprintf(f, "  Componente %d: %d vertices\n", i + 1, rc->componentes[i].tamanho);
     componentes_destruir(rc);
 
+    fprintf(f, "Diametro (exato):       %d\n", diametro(g));
+    fprintf(f, "Diametro (aproximado):  %d\n", diametro_aproximado(g));
+
     fclose(f);
 }
 
@@ -322,4 +325,46 @@ ResultComponentes *componentes_conexas(Grafo *g) {
  
     free(visitado);
     return rc;
+}
+
+//função que calcular a distancia entre dois vértices
+int distancia(Grafo *g, int u, int v) {
+    ResultBusca *res = bfs(g, u);
+    int dist = res->nivel[v];
+    busca_resultado_destruir(res);
+    return dist;
+}
+
+//função que calcula o diametro exato usando a bfs para cada vertice e pegando o maior nivel
+int diametro(Grafo *g) {
+    int diam = 0;
+    for(int u = 1; u <= g->num_vertices; u++) {
+        ResultBusca *res = bfs(g, u);
+        for(int v = 1; v <= g->num_vertices; v++) {
+            if(res->nivel[v] > diam)
+                diam = res->nivel[v];
+        }
+        busca_resultado_destruir(res);
+    }
+    return diam;
+}
+
+//função que calcula o diametro aproximado usando 2 bfs, a primeira para achar o vertice mais distante do vertice 1 e a segunda para achar o diametro a partir desse vertice
+int diametro_aproximado(Grafo *g) {
+    ResultBusca *res1 = bfs(g, 1);
+    int u = 1;
+    for(int v = 2; v <= g->num_vertices; v++) {
+        if(res1->nivel[v] != -1 && res1->nivel[v] > res1->nivel[u])
+            u = v;
+    }
+    busca_resultado_destruir(res1);
+
+    ResultBusca *res2 = bfs(g, u);
+    int diam = 0;
+    for(int v = 1; v <= g->num_vertices; v++) {
+        if(res2->nivel[v] > diam)
+            diam = res2->nivel[v];
+    }
+    busca_resultado_destruir(res2);
+    return diam;
 }
