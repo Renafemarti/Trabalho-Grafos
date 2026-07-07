@@ -87,8 +87,12 @@ void grafo_escrever_info(Grafo *g, const char *arquivo) {
         fprintf(f, "  Componente %d: %d vertices\n", i + 1, rc->componentes[i].tamanho);
     componentes_destruir(rc);
 
-    fprintf(f, "Diametro (exato):       %d\n", diametro(g));
     fprintf(f, "Diametro (aproximado):  %d\n", diametro_aproximado(g));
+    if (g->num_vertices <= 5000) {
+        fprintf(f, "Diametro (exato):       %d\n", diametro(g));
+    } else {
+        fprintf(f, "Diametro (exato):       nao calculado (grafo grande demais, %d vertices)\n", g->num_vertices);
+    }
 
     fclose(f);
 }
@@ -367,4 +371,34 @@ int diametro_aproximado(Grafo *g) {
     }
     busca_resultado_destruir(res2);
     return diam;
+}
+
+//funcao pra escrever no arquivo o pai e o nivel de cada vertice, resultado da bfs ou dfs
+void busca_escrever(Grafo *g, ResultBusca *res, int origem, const char *tipo, const char *arquivo) {
+    FILE *f = fopen(arquivo, "w");
+    if (!f) { perror("busca_escrever"); return; }
+
+    fprintf(f, "Busca: %s\n", tipo);
+    fprintf(f, "Origem: %d\n", origem);
+    fprintf(f, "vertice pai nivel\n");
+    for (int v = 1; v <= g->num_vertices; v++) {
+        fprintf(f, "%d %d %d\n", v, res->pai[v], res->nivel[v]);
+    }
+    fclose(f);
+}
+
+//funcao pra escrever no arquivo as componentes conexas (numero, tamanho e vertices de cada uma)
+void componentes_escrever(ResultComponentes *res, const char *arquivo) {
+    FILE *f = fopen(arquivo, "w");
+    if (!f) { perror("componentes_escrever"); return; }
+
+    fprintf(f, "Numero de componentes conexas: %d\n\n", res->num_componentes);
+    for (int i = 0; i < res->num_componentes; i++) {
+        fprintf(f, "Componente %d - tamanho %d\n", i + 1, res->componentes[i].tamanho);
+        fprintf(f, "Vertices: ");
+        for (int j = 0; j < res->componentes[i].tamanho; j++)
+            fprintf(f, "%d ", res->componentes[i].vertices[j]);
+        fprintf(f, "\n\n");
+    }
+    fclose(f);
 }
